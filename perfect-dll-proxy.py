@@ -39,15 +39,17 @@ def main():
 
     # Enumerate the exports
     pe = pefile.PE(dll)
-    fullpath = r"\\\\.\\GLOBALROOT\\SystemRoot\\System32\\" + basename
     commands = []
     for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
         ordinal = exp.ordinal
         if exp.name is None:
-            command = f"__proxy{ordinal}={fullpath}.#{ordinal},@{ordinal},NONAME"
+            command = f"__proxy{ordinal}=\" DLLPATH \".#{ordinal},@{ordinal},NONAME"
         else:
             name = exp.name.decode()
-            command = f"{name}={fullpath}.{name}"
+            command = f"{name}=\" DLLPATH \".{name}"
+            # The first underscore is removed by the linker
+            if name.startswith("_"):
+                command = f"_{command}"
             # Special case for COM exports
             if name in {
                 "DllCanUnloadNow",
@@ -63,7 +65,15 @@ def main():
 
     # Generate the proxy
     with open(output, "w") as f:
-        f.write("#include <Windows.h>\n\n")
+        f.write(f"""#include <Windows.h>
+
+#ifdef _WIN64
+#define DLLPATH "\\\\\\\\.\\\\GLOBALROOT\\\\SystemRoot\\\\System32\\\\{basename}"
+#else
+#define DLLPATH "\\\\\\\\.\\\\GLOBALROOT\\\\SystemRoot\\\\SysWOW64\\\\{basename}"
+#endif // _WIN64
+
+""")
         for command in commands:
             f.write(f"#pragma comment(linker, \"/EXPORT:{command}\")\n")
         f.write("""
