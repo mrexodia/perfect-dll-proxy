@@ -10,6 +10,8 @@ A while ago I needed a proxy to perform DLL hijacking, but I did not like how ex
 
 See the references for more information.
 
+To automatically generate a DLL that exports everything and loads an arbitrary DLL (without intercepting functions), look at the following project: https://github.com/namazso/dll-proxy-generator
+
 ## Usage
 
 ```sh
